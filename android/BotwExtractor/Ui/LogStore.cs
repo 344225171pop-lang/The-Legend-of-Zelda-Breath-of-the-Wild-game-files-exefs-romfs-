@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Text;
 
 namespace BotwExtractor.Ui
@@ -20,6 +20,9 @@ namespace BotwExtractor.Ui
         readonly object _gate = new object();
         readonly List<LogEntry> _entries = new List<LogEntry>();
         readonly int _capacity;
+        // True while timestamps are non-decreasing; enables the binary-search
+        // fast path in Filter. Falls back to a linear scan once violated.
+        bool _sorted = true;
 
         public LogStore(int capacity = DefaultCapacity)
         {
@@ -36,6 +39,8 @@ namespace BotwExtractor.Ui
             if (entry == null) return;
             lock (_gate)
             {
+                if (_entries.Count > 0 && entry.Timestamp < _entries[_entries.Count - 1].Timestamp)
+                    _sorted = false;
                 _entries.Add(entry);
                 if (_entries.Count > _capacity)
                     _entries.RemoveRange(0, _entries.Count - _capacity);
@@ -47,14 +52,57 @@ namespace BotwExtractor.Ui
             lock (_gate) return new List<LogEntry>(_entries);
         }
 
-        // Inclusive [from, to] filter.
+        // Inclusive [from, to] filter. Sorted stores use two binary searches
+        // (O(log n) locate + O(k) copy, pre-sized result); out-of-order stores
+        // fall back to a single linear pass. No LINQ closures/iterators.
         public List<LogEntry> Filter(DateTime from, DateTime to)
         {
             lock (_gate)
-                return _entries.Where(e => e.Timestamp >= from && e.Timestamp <= to).ToList();
+            {
+                if (_sorted)
+                {
+                    int lo = LowerBound(from);
+                    int hi = UpperBound(to);
+                    int n = hi - lo;
+                    var result = new List<LogEntry>(n > 0 ? n : 0);
+                    for (int i = lo; i < hi; i++) result.Add(_entries[i]);
+                    return result;
+                }
+                var list = new List<LogEntry>();
+                for (int i = 0; i < _entries.Count; i++)
+                {
+                    var e = _entries[i];
+                    if (e.Timestamp >= from && e.Timestamp <= to) list.Add(e);
+                }
+                return list;
+            }
         }
 
-        public void Clear() { lock (_gate) _entries.Clear(); }
+        // First index with Timestamp >= t.
+        int LowerBound(DateTime t)
+        {
+            int lo = 0, hi = _entries.Count;
+            while (lo < hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                if (_entries[mid].Timestamp < t) lo = mid + 1; else hi = mid;
+            }
+            return lo;
+        }
+
+        // First index with Timestamp > t.
+        int UpperBound(DateTime t)
+        {
+            int lo = 0, hi = _entries.Count;
+            while (lo < hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                if (_entries[mid].Timestamp <= t) lo = mid + 1; else hi = mid;
+            }
+            return lo;
+        }
+
+        public void Clear() { lock (_gate) { _entries.Clear(); _sorted = true; } }
     }
 
     public enum LogRangePreset { All, LastHour, Last24Hours }
@@ -94,26 +142,61 @@ namespace BotwExtractor.Ui
     {
         public const string TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff";
 
-        // Builds a standard, self-describing .log body: a context header followed
-        // by one "[timestamp] [LEVEL] message" line per entry.
+        // Single source of truth for the .log format: a context header followed
+        // by one "[timestamp] [LEVEL] message" line per entry. Streams straight
+        // into any TextWriter (no intermediate giant string, no per-line
+        // concatenation), so exports can write incrementally with buffered IO.
+        public static void WriteTo(TextWriter writer, IReadOnlyList<LogEntry> entries, LogContext ctx)
+        {
+            ctx ??= new LogContext();
+            entries ??= Array.Empty<LogEntry>();
+            writer.WriteLine("==== BOTW Extractor 运行日志 ====");
+            writer.Write("应用版本: "); writer.WriteLine(ctx.AppVersion ?? "");
+            writer.Write("设备: "); writer.WriteLine(ctx.Device ?? "");
+            writer.Write("Android 版本: "); writer.WriteLine(ctx.AndroidVersion ?? "");
+            writer.Write("主题模式: "); writer.WriteLine(ctx.ThemeMode ?? "");
+            writer.Write("配色方案: "); writer.WriteLine(ctx.Palette ?? "");
+            writer.Write("导出时间: "); writer.WriteLine(ctx.ExportedAt.ToString(TimestampFormat));
+            writer.Write("日志范围: "); writer.Write(ctx.RangeDescription ?? "");
+            writer.Write(" ("); writer.Write(ctx.RangeFrom.ToString(TimestampFormat));
+            writer.Write(" ~ "); writer.Write(ctx.RangeTo.ToString(TimestampFormat));
+            writer.WriteLine(")");
+            writer.Write("日志条数: "); writer.WriteLine(entries.Count);
+            writer.WriteLine("================================");
+            // One reusable char buffer for every line: timestamp formatted via
+            // TryFormat (no per-line string alloc), level/message copied in,
+            // then a single Write call per line instead of six small ones.
+            string nl = Environment.NewLine;
+            char[] buf = new char[256];
+            for (int i = 0; i < entries.Count; i++)
+            {
+                var e = entries[i];
+                string level = e.Level ?? "INFO";
+                string msg = e.Message ?? "";
+                int need = 29 + level.Length + msg.Length + nl.Length; // "[ts] [level] msg" + newline
+                if (need > buf.Length) Array.Resize(ref buf, Math.Max(need, buf.Length * 2));
+                int p = 0;
+                buf[p++] = '[';
+                e.Timestamp.TryFormat(buf.AsSpan(p), out int tw, TimestampFormat);
+                p += tw;
+                buf[p++] = ']'; buf[p++] = ' '; buf[p++] = '[';
+                level.AsSpan().CopyTo(buf.AsSpan(p)); p += level.Length;
+                buf[p++] = ']'; buf[p++] = ' ';
+                msg.AsSpan().CopyTo(buf.AsSpan(p)); p += msg.Length;
+                nl.AsSpan().CopyTo(buf.AsSpan(p)); p += nl.Length;
+                writer.Write(buf, 0, p);
+            }
+        }
+
+        // Builds the full .log body as a string (used by the preview dialog).
+        // Delegates to WriteTo so preview and exported file are byte-identical;
+        // the StringBuilder is pre-sized to avoid repeated grow-and-copy.
         public static string Format(IReadOnlyList<LogEntry> entries, LogContext ctx)
         {
             ctx ??= new LogContext();
             entries ??= Array.Empty<LogEntry>();
-            var sb = new StringBuilder();
-            sb.AppendLine("==== BOTW Extractor 运行日志 ====");
-            sb.AppendLine("应用版本: " + (ctx.AppVersion ?? ""));
-            sb.AppendLine("设备: " + (ctx.Device ?? ""));
-            sb.AppendLine("Android 版本: " + (ctx.AndroidVersion ?? ""));
-            sb.AppendLine("主题模式: " + (ctx.ThemeMode ?? ""));
-            sb.AppendLine("配色方案: " + (ctx.Palette ?? ""));
-            sb.AppendLine("导出时间: " + ctx.ExportedAt.ToString(TimestampFormat));
-            sb.AppendLine("日志范围: " + (ctx.RangeDescription ?? "") +
-                " (" + ctx.RangeFrom.ToString(TimestampFormat) + " ~ " + ctx.RangeTo.ToString(TimestampFormat) + ")");
-            sb.AppendLine("日志条数: " + entries.Count);
-            sb.AppendLine("================================");
-            foreach (var e in entries)
-                sb.AppendLine("[" + e.Timestamp.ToString(TimestampFormat) + "] [" + (e.Level ?? "INFO") + "] " + (e.Message ?? ""));
+            var sb = new StringBuilder(256 + entries.Count * 80);
+            using (var w = new StringWriter(sb)) WriteTo(w, entries, ctx);
             return sb.ToString();
         }
 

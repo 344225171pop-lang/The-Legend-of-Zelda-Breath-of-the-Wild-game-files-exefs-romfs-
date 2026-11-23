@@ -33,7 +33,9 @@ namespace BotwExtractor
         RadioGroup _rgNight;
         TextView _txtCacheSize, _txtHexPrimary, _txtHexSecondary, _txtHexTertiary;
         bool _syncingNight;
-        string _pendingExport, _pendingName;
+        List<LogEntry> _pendingEntries;
+        LogContext _pendingCtx;
+        string _pendingName;
         SystemBarsInsetsListener _insetsListener;
 
         protected override void OnCreate(Bundle savedInstanceState)
@@ -217,7 +219,7 @@ namespace BotwExtractor
 
         LogContext BuildContext(LogRangePreset preset, DateTime from, DateTime to, DateTime now)
         {
-            string version = "1.4";
+            string version = "1.6";
             try { version = PackageManager.GetPackageInfo(PackageName, 0).VersionName; } catch { }
             return new LogContext
             {
@@ -238,8 +240,12 @@ namespace BotwExtractor
             var now = DateTime.Now;
             var (from, to) = LogRange.Resolve(preset, now);
             var entries = AppState.Logs.Filter(from, to);
-            string content = LogExporter.Format(entries, BuildContext(preset, from, to, now));
-            _pendingExport = content;
+            var ctx = BuildContext(preset, from, to, now);
+            string content = LogExporter.Format(entries, ctx);
+            // Keep the raw entries + context; the actual export streams them
+            // again instead of re-writing the giant preview string.
+            _pendingEntries = entries;
+            _pendingCtx = ctx;
             _pendingName = LogExporter.SuggestedFileName(now);
 
             var view = LayoutInflater.Inflate(Resource.Layout.dialog_log_preview, null);
@@ -269,19 +275,35 @@ namespace BotwExtractor
         {
             base.OnActivityResult(requestCode, resultCode, data);
             if (requestCode != ReqExport || resultCode != Result.Ok || data?.Data == null) return;
-            try
+            var entries = _pendingEntries;
+            var ctx = _pendingCtx;
+            string name = _pendingName;
+            if (entries == null) return;
+            var target = data.Data;
+            // Stream the export on a worker thread with a 64 KB buffer: no UI
+            // thread blocking, no full-content string copy during IO.
+            Task.Run(() =>
             {
-                using var stream = ContentResolver.OpenOutputStream(data.Data, "w");
-                using var writer = new StreamWriter(stream, new UTF8Encoding(false));
-                writer.Write(_pendingExport);
-                Toast("日志已导出");
-                AppState.Logs.Add("INFO", "日志已导出: " + _pendingName);
-            }
-            catch (Exception ex)
-            {
-                Toast("导出失败: " + ex.Message);
-                AppState.Logs.Add("ERROR", "日志导出失败: " + ex.Message);
-            }
+                try
+                {
+                    using var stream = ContentResolver.OpenOutputStream(target, "w");
+                    using var writer = new StreamWriter(stream, new UTF8Encoding(false), 64 * 1024);
+                    LogExporter.WriteTo(writer, entries, ctx);
+                    RunOnUiThread(() =>
+                    {
+                        Toast("日志已导出");
+                        AppState.Logs.Add("INFO", "日志已导出: " + name);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    RunOnUiThread(() =>
+                    {
+                        Toast("导出失败: " + ex.Message);
+                        AppState.Logs.Add("ERROR", "日志导出失败: " + ex.Message);
+                    });
+                }
+            });
         }
 
         // ---- 缓存清理 ----
