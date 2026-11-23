@@ -108,7 +108,7 @@ namespace BotwExtractor
             _btnStart.Click += (s, e) => { if (_running) _cts?.Cancel(); else StartExtract(); };
 
             RefreshPermission();
-            AppState.Logs.Add("INFO", "应用启动 v1.4 · " + Build.Manufacturer + " " + Build.Model +
+            AppState.Logs.Add("INFO", "应用启动 v1.5 · " + Build.Manufacturer + " " + Build.Model +
                 " · Android " + Build.VERSION.Release);
         }
 
@@ -348,7 +348,16 @@ namespace BotwExtractor
                 }
                 catch (Exception ex)
                 {
-                    RunOnUiThread(() => { _txtStatus.Text = "出错"; AppendLog("错误: " + ex.Message); AppendLog(ex.ToString()); SetUiRunning(false); });
+                    string friendly = ErrorMessages.Describe(ex.GetType().Name, ex.Message);
+                    RunOnUiThread(() =>
+                    {
+                        _txtStatus.Text = "出错";
+                        AppendLog("错误: " + friendly);
+                        // Keep the raw stack trace out of the fixed on-screen window;
+                        // full technical detail is preserved in the exportable store.
+                        AppState.Logs.Add("ERROR", ex.ToString());
+                        SetUiRunning(false);
+                    });
                 }
                 finally
                 {
