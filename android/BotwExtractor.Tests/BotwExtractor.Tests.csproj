@@ -10,6 +10,8 @@
   <ItemGroup>
     <!-- Share the Android-free UI logic with the app without referencing Android. -->
     <Compile Include="..\BotwExtractor\Ui\*.cs" Link="Ui\%(Filename)%(Extension)" />
+    <!-- Section copier is pure System.* logic; shared for parallel-copy tests. -->
+    <Compile Include="..\..\core\Extractor.Core\ParallelSectionCopier.cs" Link="Core\ParallelSectionCopier.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />

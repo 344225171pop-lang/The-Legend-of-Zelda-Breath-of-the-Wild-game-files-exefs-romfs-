@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using LibHac;
 using LibHac.Common;
 using LibHac.Common.Keys;
@@ -25,10 +26,15 @@ namespace Extractor.Core
         public string TempDir;
         public bool ExtractRomfs = true;
         public bool ExtractExefs = true;
+        // 0 = auto (min(logical cores, 6)). 1 forces the serial path, which is
+        // useful for benchmarking and for very slow storage.
+        public int Parallelism;
     }
 
     public static class GameExtractor
     {
+        public const int MaxAutoParallelism = 6;
+
         public static void Run(ExtractOptions opt, IProgress<ExtractProgress> progress, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(opt.ProdKeysPath)) throw new ArgumentException("缺少 prod.keys");
@@ -48,40 +54,64 @@ namespace Extractor.Core
                     ? null
                     : ResolveNca(opt.UpdatePath, tempDir, keys, progress, ct, tempFiles, "update");
 
-                using var baseStorage = new LocalStorage(baseNcaPath, FileAccess.Read);
-                var baseNca = new Nca(keys, baseStorage);
-
-                LocalStorage patchStorage = null;
-                Nca patchNca = null;
-                if (updateNcaPath != null)
+                string titleId;
+                bool hasCode, hasData;
+                using (var probeStorage = new LocalStorage(baseNcaPath, FileAccess.Read))
                 {
-                    patchStorage = new LocalStorage(updateNcaPath, FileAccess.Read);
-                    patchNca = new Nca(keys, patchStorage);
+                    var probe = new Nca(keys, probeStorage);
+                    titleId = probe.Header.TitleId.ToString("X16");
+                    hasCode = probe.SectionExists(NcaSectionType.Code);
+                    hasData = probe.SectionExists(NcaSectionType.Data);
                 }
 
-                try
+                string outRoot = Path.Combine(opt.OutputDir, titleId);
+                ProgressReporter.Report(progress, "extract",
+                    $"Base TitleId={titleId} Code={hasCode} Data={hasData}");
+
+                bool doExefs = opt.ExtractExefs && hasCode;
+                bool doRomfs = opt.ExtractRomfs && hasData;
+                if (opt.ExtractExefs && !hasCode)
+                    ProgressReporter.Report(progress, "extract", "无 Code 段，跳过 exefs");
+                if (opt.ExtractRomfs && !hasData)
+                    ProgressReporter.Report(progress, "extract", "无 Data 段，跳过 romfs");
+
+                int maxPar = opt.Parallelism > 0
+                    ? opt.Parallelism
+                    : Math.Min(Environment.ProcessorCount, MaxAutoParallelism);
+
+                if (doExefs || doRomfs)
                 {
-                    string titleId = baseNca.Header.TitleId.ToString("X16");
-                    string outRoot = Path.Combine(opt.OutputDir, titleId);
-                    ProgressReporter.Report(progress, "extract",
-                        $"Base TitleId={titleId} Code={baseNca.SectionExists(NcaSectionType.Code)} Data={baseNca.SectionExists(NcaSectionType.Data)}");
+                    // exefs and romfs use independent NCA handles, so they run
+                    // simultaneously instead of one blocking the other. When both
+                    // are requested the small exefs gets a smaller share.
+                    int exefsPar = maxPar, romfsPar = maxPar;
+                    if (doExefs && doRomfs)
+                    {
+                        exefsPar = Math.Max(1, Math.Min(2, maxPar / 2));
+                        romfsPar = Math.Max(2, maxPar - exefsPar);
+                    }
 
-                    if (opt.ExtractExefs && baseNca.SectionExists(NcaSectionType.Code))
-                        ExtractSection(baseNca, patchNca, NcaSectionType.Code, Path.Combine(outRoot, "exefs"), progress, ct);
-                    else if (opt.ExtractExefs)
-                        ProgressReporter.Report(progress, "extract", "无 Code 段，跳过 exefs");
+                    var jobs = new List<Task>(2);
+                    if (doExefs)
+                        jobs.Add(Task.Factory.StartNew(() => RunSection(keys, baseNcaPath, updateNcaPath,
+                                NcaSectionType.Code, Path.Combine(outRoot, "exefs"), exefsPar, false, progress, ct),
+                            CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
+                    if (doRomfs)
+                        jobs.Add(Task.Factory.StartNew(() => RunSection(keys, baseNcaPath, updateNcaPath,
+                                NcaSectionType.Data, Path.Combine(outRoot, "romfs"), romfsPar, true, progress, ct),
+                            CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
 
-                    if (opt.ExtractRomfs && baseNca.SectionExists(NcaSectionType.Data))
-                        ExtractSection(baseNca, patchNca, NcaSectionType.Data, Path.Combine(outRoot, "romfs"), progress, ct);
-                    else if (opt.ExtractRomfs)
-                        ProgressReporter.Report(progress, "extract", "无 Data 段，跳过 romfs");
-
-                    ProgressReporter.Report(progress, "done", $"完成：{outRoot}", 0, 0, 100);
+                    try
+                    {
+                        Task.WaitAll(jobs.ToArray());
+                    }
+                    catch (AggregateException ae)
+                    {
+                        throw Unwrap(ae);
+                    }
                 }
-                finally
-                {
-                    patchStorage?.Dispose();
-                }
+
+                ProgressReporter.Report(progress, "done", $"完成：{outRoot}", 0, 0, 100);
             }
             finally
             {
@@ -90,6 +120,14 @@ namespace Extractor.Core
                     try { File.Delete(t); } catch { }
                 }
             }
+        }
+
+        static Exception Unwrap(AggregateException ae)
+        {
+            var flat = ae.Flatten().InnerExceptions;
+            foreach (var e in flat)
+                if (!(e is OperationCanceledException)) return e;
+            return flat[0];
         }
 
         private static string ResolveNca(string input, string tempDir, KeySet keys,
@@ -117,56 +155,172 @@ namespace Extractor.Core
             return input; // already a raw NCA
         }
 
-        private static void ExtractSection(Nca baseNca, Nca patchNca, NcaSectionType type,
-            string outDir, IProgress<ExtractProgress> progress, CancellationToken ct)
+        private static void RunSection(KeySet keys, string baseNcaPath, string patchNcaPath,
+            NcaSectionType type, string outDir, int parallelism, bool reportPercent,
+            IProgress<ExtractProgress> progress, CancellationToken ct)
         {
-            IFileSystem fs = (patchNca != null && patchNca.SectionExists(type))
-                ? baseNca.OpenFileSystemWithPatch(patchNca, type, IntegrityCheckLevel.None)
-                : baseNca.OpenFileSystem(type, IntegrityCheckLevel.None);
-
             Directory.CreateDirectory(outDir);
-            long files = 0, bytes = 0;
-            foreach (DirectoryEntryEx e in fs.EnumerateEntries("/", "*", SearchOptions.RecurseSubdirectories))
-            {
-                ct.ThrowIfCancellationRequested();
-                string rel = e.FullPath.TrimStart('/');
-                string dest = Path.Combine(outDir, rel.Replace('/', Path.DirectorySeparatorChar));
-                if (e.Type == DirectoryEntryType.Directory)
+            var factory = new NcaSectionSourceFactory(keys, baseNcaPath, patchNcaPath, type);
+
+            var entries = factory.Enumerate();
+            long totalBytes = 0;
+            foreach (var e in entries)
+                if (!e.IsDirectory) totalBytes += e.Size;
+
+            var result = ParallelSectionCopier.Copy(
+                entries, outDir, factory,
+                new ParallelCopyOptions { Parallelism = parallelism },
+                (files, bytes) =>
                 {
-                    Directory.CreateDirectory(dest);
-                    continue;
-                }
-                Directory.CreateDirectory(Path.GetDirectoryName(dest));
-                ExtractFile(fs, e, dest);
-                files++;
-                bytes += e.Size;
-                if (files % 200 == 0)
+                    double percent = reportPercent && totalBytes > 0 ? bytes * 100.0 / totalBytes : -1;
                     ProgressReporter.Report(progress, "extract",
-                        $"{type}：{files} 文件，{bytes / 1073741824.0:F2} GiB", files, bytes);
-            }
+                        $"{type}：{files} 文件，{bytes / 1073741824.0:F2} GiB", files, bytes, percent);
+                },
+                ct);
+
             ProgressReporter.Report(progress, "extract",
-                $"{type} 完成：{files} 文件，{bytes / 1073741824.0:F2} GiB", files, bytes);
+                $"{type} 完成：{result.FileCount} 文件，{result.ByteCount / 1073741824.0:F2} GiB",
+                result.FileCount, result.ByteCount);
         }
 
-        private static void ExtractFile(IFileSystem fs, DirectoryEntryEx e, string dest)
+        // Independent NCA view used by one worker thread. Each session owns its
+        // own LocalStorage/Nca/IFileSystem instances because LibHac file systems
+        // are not thread-safe; separate instances are.
+        private sealed class NcaSectionSourceFactory : ISectionSourceFactory
         {
-            var fileRef = new UniqueRef<IFile>();
-            fs.OpenFile(ref fileRef, e.FullPath.ToU8Span(), OpenMode.Read).ThrowIfFailure();
-            using (fileRef)
-            using (var output = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+            readonly KeySet _keys;
+            readonly string _basePath;
+            readonly string _patchPath;
+            readonly NcaSectionType _type;
+
+            public NcaSectionSourceFactory(KeySet keys, string basePath, string patchPath, NcaSectionType type)
             {
-                IFile f = fileRef.Get;
-                long offset = 0, remaining = e.Size;
-                byte[] buf = new byte[1 << 20];
-                while (remaining > 0)
+                _keys = keys;
+                _basePath = basePath;
+                _patchPath = patchPath;
+                _type = type;
+            }
+
+            public List<SourceEntry> Enumerate()
+            {
+                using var session = (NcaSectionSession)OpenSession();
+                var list = new List<SourceEntry>();
+                foreach (DirectoryEntryEx e in session.FileSystem.EnumerateEntries(
+                             "/", "*", SearchOptions.RecurseSubdirectories))
                 {
-                    int toRead = (int)Math.Min(buf.Length, remaining);
-                    f.Read(out long read, offset, buf.AsSpan(0, toRead)).ThrowIfFailure();
-                    if (read <= 0) throw new IOException($"Short read: {e.FullPath}");
-                    output.Write(buf, 0, (int)read);
-                    offset += read;
-                    remaining -= read;
+                    list.Add(new SourceEntry
+                    {
+                        RelativePath = e.FullPath.TrimStart('/'),
+                        Size = e.Type == DirectoryEntryType.Directory ? 0 : e.Size,
+                        IsDirectory = e.Type == DirectoryEntryType.Directory,
+                    });
                 }
+                return list;
+            }
+
+            public ISectionSession OpenSession()
+            {
+                var baseStorage = new LocalStorage(_basePath, FileAccess.Read);
+                try
+                {
+                    var baseNca = new Nca(_keys, baseStorage);
+                    LocalStorage patchStorage = null;
+                    Nca patchNca = null;
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(_patchPath))
+                        {
+                            patchStorage = new LocalStorage(_patchPath, FileAccess.Read);
+                            patchNca = new Nca(_keys, patchStorage);
+                        }
+
+                        IFileSystem fs = (patchNca != null && patchNca.SectionExists(_type))
+                            ? baseNca.OpenFileSystemWithPatch(patchNca, _type, IntegrityCheckLevel.None)
+                            : baseNca.OpenFileSystem(_type, IntegrityCheckLevel.None);
+
+                        var session = new NcaSectionSession(fs, patchStorage, baseStorage);
+                        patchStorage = null; // ownership moved to the session
+                        baseStorage = null;
+                        return session;
+                    }
+                    finally
+                    {
+                        patchStorage?.Dispose();
+                    }
+                }
+                finally
+                {
+                    baseStorage?.Dispose();
+                }
+            }
+        }
+
+        private sealed class NcaSectionSession : ISectionSession
+        {
+            LocalStorage _patchStorage;
+            LocalStorage _baseStorage;
+
+            public NcaSectionSession(IFileSystem fs, LocalStorage patchStorage, LocalStorage baseStorage)
+            {
+                FileSystem = fs;
+                _patchStorage = patchStorage;
+                _baseStorage = baseStorage;
+            }
+
+            public IFileSystem FileSystem { get; private set; }
+
+            public IRandomFileSource OpenFile(string relativePath)
+            {
+                var fileRef = new UniqueRef<IFile>();
+                string path = "/" + (relativePath ?? "").TrimStart('/');
+                FileSystem.OpenFile(ref fileRef, path.ToU8Span(), OpenMode.Read).ThrowIfFailure();
+                try
+                {
+                    fileRef.Get.GetSize(out long size).ThrowIfFailure();
+                    return new LibHacFileSource(fileRef, size);
+                }
+                catch
+                {
+                    fileRef.Destroy();
+                    throw;
+                }
+            }
+
+            public void Dispose()
+            {
+                try { FileSystem?.Dispose(); } catch { }
+                try { _patchStorage?.Dispose(); } catch { }
+                try { _baseStorage?.Dispose(); } catch { }
+                FileSystem = null;
+                _patchStorage = null;
+                _baseStorage = null;
+            }
+        }
+
+        private sealed class LibHacFileSource : IRandomFileSource
+        {
+            UniqueRef<IFile> _fileRef;
+            bool _disposed;
+
+            public LibHacFileSource(UniqueRef<IFile> fileRef, long length)
+            {
+                _fileRef = fileRef;
+                Length = length;
+            }
+
+            public long Length { get; }
+
+            public int Read(long offset, Span<byte> destination)
+            {
+                _fileRef.Get.Read(out long read, offset, destination).ThrowIfFailure();
+                return (int)read;
+            }
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                _fileRef.Destroy();
             }
         }
     }

@@ -18,9 +18,10 @@
 - 支持 `NSP`（PFS0 容器）与 `NSZ`（压缩 NCA）输入，自动识别并解压 `NCZ` 段。
 - 支持本体（base）+ 更新补丁（update/patch）合并提取，输出标准 `exefs` / `romfs` 目录结构。
 - 基于 LibHac 的 NCA 解析与 AES-CTR 解密，流式写出，支持进度回调与取消。
+- **多线程导出**：exefs 与 romfs 并行执行；段内使用 worker 池分片复制，大文件按块并行写入；每个 worker 持有独立的 NCA 读取会话以保证线程安全（默认并行度 `min(核心数, 6)`，可用 `ExtractOptions.Parallelism` 调整）。
 - 提供 PC 端验证入口（`PcVerify`）与命令行提取示例（`extractor`）。
 
-### Android 应用（BotwExtractor，v1.4）
+### Android 应用（BotwExtractor，v1.7）
 
 - **暗黑模式**：支持「跟随系统主题」自动适配与手动切换，切换带淡入淡出过渡动画；明暗两套配色均按 WCAG 2.x 对比度公式校验文字可读性。
 - **日志导出**：设置区提供导出入口，流程为「时间范围选择 → 内容预览 → 生成标准 `.log` 文件」，导出内容包含完整运行上下文。
@@ -70,7 +71,8 @@
 ├── core/                         # 跨平台提取核心（.NET 8）
 │   ├── Extractor.Core/           # 提取核心类库
 │   │   ├── Extractor.Core.csproj # 类库工程文件（引用 LibHac / ZstdSharp）
-│   │   ├── GameExtractor.cs      # 提取主流程：解析输入→解密→导出 exefs/romfs，含 ExtractOptions
+│   │   ├── GameExtractor.cs      # 提取主流程：解析输入→解密→并行导出 exefs/romfs，含 ExtractOptions
+│   │   ├── ParallelSectionCopier.cs # 多线程分段复制引擎：worker 池、大文件分块并行、进度/取消
 │   │   ├── NspHelper.cs          # NSP(PFS0) 容器解析，提取 Program NCA，识别 NCZ
 │   │   ├── NszDecompressor.cs    # NSZ/NCZ（压缩 NCA）解压还原为标准 NCA
 │   │   ├── AesCtr.cs             # 基于 AES-ECB 实现的 AES-CTR 解密器
@@ -79,6 +81,18 @@
 │   └── PcVerify/                 # PC 端验证入口（调用核心库跑通完整提取）
 │       ├── PcVerify.csproj
 │       └── Program.cs
+│
+├── perf/                         # 性能基准工程与报告（不属于发布产物）
+│   ├── ExportBench/              # 日志导出基准：v1.5 串行 vs v1.6 流式
+│   ├── ExtractBench/             # exefs/romfs 基准：v1.6 串行 vs v1.7 多线程（--prepare 解包镜像）
+│   ├── bench-output.md           # 日志导出基准原始输出
+│   └── extract-bench-output.md   # 提取基准原始输出
+│
+├── docs/perf/                    # 性能优化日志与测试报告
+│   ├── optimization-log.md
+│   ├── export-benchmark-report.md
+│   ├── extraction-thread-optimization.md
+│   └── extraction-benchmark-report.md
 │
 ├── extractor/                    # 命令行提取示例（直接基于 LibHac 的 NCA 提取）
 │   ├── extractor.csproj
@@ -110,6 +124,8 @@
 │       ├── BotwExtractor.Tests.csproj
 │       ├── ColorMathTests.cs     # 颜色 / 对比度测试
 │       ├── LogStoreTests.cs      # 日志存储 / 导出测试
+│       ├── ExportOptimizationTests.cs # 导出优化字节级一致性测试（对照 v1.5 算法）
+│       ├── ParallelSectionCopierTests.cs # 多线程分段复制正确性测试
 │       ├── CacheScannerTests.cs  # 缓存扫描 / 清理 / 保护测试
 │       ├── ThemePrefsTests.cs    # 主题持久化 / 重置测试
 │       └── IntegrationTests.cs   # 跨功能集成测试
@@ -168,11 +184,12 @@ dotnet build android/BotwExtractor/BotwExtractor.csproj -c Release
 
 ## 测试说明
 
-测试工程 `BotwExtractor.Tests` 基于 **xUnit**，通过 `Compile Include` 共享应用中的 `Ui/*.cs` 纯逻辑层，从而在**不依赖 Android 运行时**的情况下验证核心行为。覆盖范围包括：
+测试工程 `BotwExtractor.Tests` 基于 **xUnit**，通过 `Compile Include` 共享应用中的 `Ui/*.cs` 纯逻辑层与 `core/Extractor.Core/ParallelSectionCopier.cs`，从而在**不依赖 Android 运行时与游戏镜像**的情况下验证核心行为。覆盖范围包括：
 
-- **正常流程**：颜色对比度计算、日志写入与导出、缓存扫描与清理、主题持久化。
-- **边界场景**：空日志、容量上限、非法颜色值、空缓存目录。
-- **异常 / 保护场景**：任务运行中临时目录受保护不被清理、重置默认值、跨功能集成一致性。
+- **正常流程**：颜色对比度计算、日志写入与导出、缓存扫描与清理、主题持久化、并行分段复制。
+- **边界场景**：空日志、容量上限、非法颜色值、空缓存目录、空文件与分块边界对齐。
+- **异常 / 保护场景**：任务运行中临时目录受保护不被清理、重置默认值、跨功能集成一致性、复制过程中取消与源读取失败。
+- **一致性场景**：日志导出的新实现与旧算法输出逐字节一致；并行复制的输出与串行复制逐字节一致。
 
 运行 `dotnet test android/BotwExtractor.Tests/BotwExtractor.Tests.csproj -c Release` 即可执行全部测试。
 

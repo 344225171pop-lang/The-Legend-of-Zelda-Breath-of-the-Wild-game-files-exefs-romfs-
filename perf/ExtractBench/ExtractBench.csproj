@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>ExtractBench</RootNamespace>
+    <AssemblyName>ExtractBench</AssemblyName>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Extractor.Core\Extractor.Core.csproj" />
+    <Reference Include="LibHac">
+      <HintPath>..\..\tools\libhac_pkg\lib\net7.0\LibHac.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
