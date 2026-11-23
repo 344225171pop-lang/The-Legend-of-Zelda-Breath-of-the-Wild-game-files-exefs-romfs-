@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>extractor</AssemblyName>
+    <RootNamespace>extractor</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="LibHac">
+      <HintPath>..\tools\libhac_pkg\lib\net7.0\LibHac.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:paddingLeft="24dp" android:paddingRight="24dp"
+    android:paddingTop="16dp" android:paddingBottom="8dp">
+
+  <View android:id="@+id/cpPreview"
+      android:layout_width="match_parent" android:layout_height="48dp" />
+
+  <com.google.android.material.textview.MaterialTextView
+      android:id="@+id/cpHex" android:text="#00696D"
+      android:textAppearance="?attr/textAppearanceTitleMedium"
+      android:textColor="?attr/colorOnSurface"
+      android:typeface="monospace"
+      android:gravity="center"
+      android:layout_width="match_parent" android:layout_height="wrap_content"
+      android:paddingTop="8dp" android:paddingBottom="8dp" />
+
+  <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+      android:layout_width="match_parent" android:layout_height="wrap_content">
+    <com.google.android.material.textview.MaterialTextView android:text="R"
+        android:textColor="?attr/colorOnSurface" android:layout_width="24dp" android:layout_height="wrap_content" />
+    <SeekBar android:id="@+id/cpR" android:max="255"
+        android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" />
+  </LinearLayout>
+  <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+      android:layout_width="match_parent" android:layout_height="wrap_content">
+    <com.google.android.material.textview.MaterialTextView android:text="G"
+        android:textColor="?attr/colorOnSurface" android:layout_width="24dp" android:layout_height="wrap_content" />
+    <SeekBar android:id="@+id/cpG" android:max="255"
+        android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" />
+  </LinearLayout>
+  <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+      android:layout_width="match_parent" android:layout_height="wrap_content">
+    <com.google.android.material.textview.MaterialTextView android:text="B"
+        android:textColor="?attr/colorOnSurface" android:layout_width="24dp" android:layout_height="wrap_content" />
+    <SeekBar android:id="@+id/cpB" android:max="255"
+        android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" />
+  </LinearLayout>
+
+  <com.google.android.material.textfield.TextInputLayout
+      android:layout_width="match_parent" android:layout_height="wrap_content"
+      android:hint="十六进制 (#RRGGBB)"
+      android:paddingTop="8dp">
+    <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/cpHexInput"
+        android:inputType="textNoSuggestions"
+        android:maxLines="1"
+        android:layout_width="match_parent" android:layout_height="wrap_content" />
+  </com.google.android.material.textfield.TextInputLayout>
+</LinearLayout>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:paddingLeft="24dp" android:paddingRight="24dp"
+    android:paddingTop="16dp" android:paddingBottom="8dp">
+
+  <com.google.android.material.textview.MaterialTextView
+      android:id="@+id/lpSummary"
+      android:textAppearance="?attr/textAppearanceBodyMedium"
+      android:textColor="?attr/colorOnSurfaceVariant"
+      android:layout_width="match_parent" android:layout_height="wrap_content"
+      android:paddingBottom="8dp" />
+
+  <ScrollView
+      android:layout_width="match_parent" android:layout_height="320dp">
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/lpContent"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurface"
+        android:typeface="monospace"
+        android:layout_width="match_parent" android:layout_height="wrap_content" />
+  </ScrollView>
+</LinearLayout>

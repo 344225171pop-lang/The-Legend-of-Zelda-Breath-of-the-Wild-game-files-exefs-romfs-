@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+  <com.google.android.material.appbar.MaterialToolbar
+      android:id="@+id/toolbar"
+      android:layout_width="match_parent"
+      android:layout_height="?attr/actionBarSize"
+      android:background="?attr/colorSurface"
+      app:elevation="0dp"
+      app:titleCentered="false" />
+
+  <androidx.core.widget.NestedScrollView
+      android:id="@+id/scroll"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      android:fillViewport="true"
+      android:clipToPadding="false">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="@dimen/page_padding"
+        android:paddingRight="@dimen/page_padding"
+        android:paddingTop="4dp"
+        android:paddingBottom="28dp">
+
+      <!-- 外观模式 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/setSecAppearance"
+          android:text="外观模式"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent" android:layout_height="wrap_content"
+          android:paddingTop="16dp" android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent" android:layout_height="wrap_content">
+        <RadioGroup
+            android:id="@+id/rgNight"
+            android:orientation="vertical"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="6dp" android:paddingBottom="6dp">
+          <com.google.android.material.radiobutton.MaterialRadioButton
+              android:id="@+id/rbSystem" android:text="跟随系统主题"
+              android:buttonTint="?attr/colorPrimary"
+              android:textAppearance="?attr/textAppearanceBodyLarge"
+              android:textColor="?attr/colorOnSurface"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp" />
+          <com.google.android.material.radiobutton.MaterialRadioButton
+              android:id="@+id/rbLight" android:text="浅色模式"
+              android:buttonTint="?attr/colorPrimary"
+              android:textAppearance="?attr/textAppearanceBodyLarge"
+              android:textColor="?attr/colorOnSurface"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp" />
+          <com.google.android.material.radiobutton.MaterialRadioButton
+              android:id="@+id/rbDark" android:text="深色模式"
+              android:buttonTint="?attr/colorPrimary"
+              android:textAppearance="?attr/textAppearanceBodyLarge"
+              android:textColor="?attr/colorOnSurface"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp" />
+        </RadioGroup>
+      </com.google.android.material.card.MaterialCardView>
+
+      <!-- 主题颜色 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/setSecTheme"
+          android:text="主题颜色"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent" android:layout_height="wrap_content"
+          android:paddingTop="20dp" android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent" android:layout_height="wrap_content">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="6dp" android:paddingBottom="12dp">
+
+          <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp">
+            <View android:id="@+id/swPrimary"
+                android:layout_width="40dp" android:layout_height="40dp" />
+            <LinearLayout android:orientation="vertical"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:layout_marginStart="14dp">
+              <com.google.android.material.textview.MaterialTextView
+                  android:text="主色调" android:textAppearance="?attr/textAppearanceBodyLarge"
+                  android:textColor="?attr/colorOnSurface"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <com.google.android.material.textview.MaterialTextView
+                  android:id="@+id/txtHexPrimary" android:text="#00696D"
+                  android:textAppearance="?attr/textAppearanceBodySmall"
+                  android:textColor="?attr/colorOnSurfaceVariant"
+                  android:typeface="monospace"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPickPrimary" style="@style/Widget.Material3.Button.TonalButton"
+                android:text="调整" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+          </LinearLayout>
+
+          <com.google.android.material.divider.MaterialDivider
+              android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+          <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp">
+            <View android:id="@+id/swSecondary"
+                android:layout_width="40dp" android:layout_height="40dp" />
+            <LinearLayout android:orientation="vertical"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:layout_marginStart="14dp">
+              <com.google.android.material.textview.MaterialTextView
+                  android:text="辅助色" android:textAppearance="?attr/textAppearanceBodyLarge"
+                  android:textColor="?attr/colorOnSurface"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <com.google.android.material.textview.MaterialTextView
+                  android:id="@+id/txtHexSecondary" android:text="#4A6364"
+                  android:textAppearance="?attr/textAppearanceBodySmall"
+                  android:textColor="?attr/colorOnSurfaceVariant"
+                  android:typeface="monospace"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPickSecondary" style="@style/Widget.Material3.Button.TonalButton"
+                android:text="调整" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+          </LinearLayout>
+
+          <com.google.android.material.divider.MaterialDivider
+              android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+          <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp">
+            <View android:id="@+id/swTertiary"
+                android:layout_width="40dp" android:layout_height="40dp" />
+            <LinearLayout android:orientation="vertical"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:layout_marginStart="14dp">
+              <com.google.android.material.textview.MaterialTextView
+                  android:text="强调色" android:textAppearance="?attr/textAppearanceBodyLarge"
+                  android:textColor="?attr/colorOnSurface"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <com.google.android.material.textview.MaterialTextView
+                  android:id="@+id/txtHexTertiary" android:text="#4D616C"
+                  android:textAppearance="?attr/textAppearanceBodySmall"
+                  android:textColor="?attr/colorOnSurfaceVariant"
+                  android:typeface="monospace"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPickTertiary" style="@style/Widget.Material3.Button.TonalButton"
+                android:text="调整" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+          </LinearLayout>
+
+          <LinearLayout android:orientation="horizontal"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="8dp">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSavePalette" android:text="保存配色"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnResetPalette" style="@style/Widget.Material3.Button.TonalButton"
+                android:text="重置默认"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:layout_marginStart="12dp" />
+          </LinearLayout>
+        </LinearLayout>
+      </com.google.android.material.card.MaterialCardView>
+
+      <!-- 日志导出 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/setSecLog"
+          android:text="日志导出"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent" android:layout_height="wrap_content"
+          android:paddingTop="20dp" android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent" android:layout_height="wrap_content">
+        <LinearLayout android:orientation="vertical"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="14dp" android:paddingBottom="14dp">
+          <com.google.android.material.textview.MaterialTextView
+              android:text="选择时间范围并预览后，导出为标准 .log 文件，包含完整系统运行上下文。"
+              android:textAppearance="?attr/textAppearanceBodyMedium"
+              android:textColor="?attr/colorOnSurfaceVariant"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingBottom="12dp" />
+          <com.google.android.material.button.MaterialButton
+              android:id="@+id/btnExportLog" android:text="导出日志"
+              android:layout_width="match_parent" android:layout_height="wrap_content" />
+        </LinearLayout>
+      </com.google.android.material.card.MaterialCardView>
+
+      <!-- 缓存清理 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/setSecCache"
+          android:text="缓存清理"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent" android:layout_height="wrap_content"
+          android:paddingTop="20dp" android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent" android:layout_height="wrap_content">
+        <LinearLayout android:orientation="vertical"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="14dp" android:paddingBottom="14dp">
+          <com.google.android.material.textview.MaterialTextView
+              android:id="@+id/txtCacheSize" android:text="当前缓存占用：0 B"
+              android:textAppearance="?attr/textAppearanceBodyLarge"
+              android:textColor="?attr/colorOnSurface"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingBottom="4dp" />
+          <com.google.android.material.textview.MaterialTextView
+              android:text="清理前会列出可清理项与占用明细。提取任务进行时，临时文件将被保护，不影响运行中的操作。"
+              android:textAppearance="?attr/textAppearanceBodyMedium"
+              android:textColor="?attr/colorOnSurfaceVariant"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingBottom="12dp" />
+          <com.google.android.material.button.MaterialButton
+              android:id="@+id/btnCleanCache" android:text="清理缓存"
+              android:layout_width="match_parent" android:layout_height="wrap_content" />
+        </LinearLayout>
+      </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+  </androidx.core.widget.NestedScrollView>
+</LinearLayout>

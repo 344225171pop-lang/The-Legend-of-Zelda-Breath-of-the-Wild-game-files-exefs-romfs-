@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Material 3 baseline (dark) — Sheikah teal palette. -->
+  <color name="md_primary">#4CD9DF</color>
+  <color name="md_on_primary">#003739</color>
+  <color name="md_primary_container">#004F52</color>
+  <color name="md_on_primary_container">#6FF6FC</color>
+  <color name="md_secondary">#B0CCCD</color>
+  <color name="md_on_secondary">#1B3435</color>
+  <color name="md_secondary_container">#324B4C</color>
+  <color name="md_on_secondary_container">#CCE8E9</color>
+  <color name="md_tertiary">#B4CAD6</color>
+  <color name="md_on_tertiary">#1E333C</color>
+  <color name="md_tertiary_container">#354A53</color>
+  <color name="md_on_tertiary_container">#D0E6F2</color>
+  <color name="md_error">#FFB4AB</color>
+  <color name="md_on_error">#690005</color>
+  <color name="md_error_container">#93000A</color>
+  <color name="md_on_error_container">#FFDAD6</color>
+  <color name="md_background">#0E1515</color>
+  <color name="md_on_background">#DDE4E3</color>
+  <color name="md_surface">#0E1515</color>
+  <color name="md_on_surface">#DDE4E3</color>
+  <color name="md_surface_variant">#3F4948</color>
+  <color name="md_on_surface_variant">#BEC9C8</color>
+  <color name="md_outline">#899392</color>
+  <color name="md_outline_variant">#3F4948</color>
+  <color name="md_surface_inverse">#DDE4E3</color>
+  <color name="md_on_surface_inverse">#2B3232</color>
+  <color name="md_primary_inverse">#00696D</color>
+</resources>

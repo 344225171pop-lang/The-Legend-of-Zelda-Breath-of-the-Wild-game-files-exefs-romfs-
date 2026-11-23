@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+  <com.google.android.material.appbar.MaterialToolbar
+      android:id="@+id/toolbar"
+      android:layout_width="match_parent"
+      android:layout_height="?attr/actionBarSize"
+      android:background="?attr/colorSurface"
+      app:elevation="0dp"
+      app:titleCentered="false" />
+
+  <androidx.core.widget.NestedScrollView
+      android:id="@+id/scroll"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      android:fillViewport="true"
+      android:clipToPadding="false">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="@dimen/page_padding"
+        android:paddingRight="@dimen/page_padding"
+        android:paddingTop="4dp"
+        android:paddingBottom="28dp">
+
+      <com.google.android.material.textview.MaterialTextView
+          android:text="从 NSP / NSZ 提取 romfs 与 exefs，支持 base + update 合并。输出结构：输出目录/TitleId/{exefs,romfs}"
+          android:textAppearance="?attr/textAppearanceBodyMedium"
+          android:textColor="?attr/colorOnSurfaceVariant"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:paddingBottom="12dp" />
+
+      <com.google.android.material.button.MaterialButton
+          android:id="@+id/btnPermission"
+          style="@style/Widget.Material3.Button.TonalButton"
+          android:text="授予全文件访问权限"
+          app:icon="@android:drawable/ic_menu_manage"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginBottom="4dp" />
+
+      <!-- 密钥 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/txtSecKeys"
+          android:text="密钥"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:paddingTop="16dp"
+          android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="6dp" android:paddingBottom="6dp">
+
+          <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp">
+            <LinearLayout android:orientation="vertical"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
+              <com.google.android.material.textview.MaterialTextView
+                  android:text="prod.keys（必需）"
+                  android:textAppearance="?attr/textAppearanceBodyLarge"
+                  android:textColor="?attr/colorOnSurface"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <com.google.android.material.textview.MaterialTextView
+                  android:id="@+id/txtProdKeys" android:text="未选择"
+                  android:textAppearance="?attr/textAppearanceBodySmall"
+                  android:textColor="?attr/colorOnSurfaceVariant"
+                  android:maxLines="2" android:ellipsize="end"
+                  android:layout_width="match_parent" android:layout_height="wrap_content"
+                  android:paddingTop="2dp" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnProdKeys"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="选择"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="12dp" />
+          </LinearLayout>
+
+          <com.google.android.material.divider.MaterialDivider
+              android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+          <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp">
+            <LinearLayout android:orientation="vertical"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
+              <com.google.android.material.textview.MaterialTextView
+                  android:text="title.keys（可选）"
+                  android:textAppearance="?attr/textAppearanceBodyLarge"
+                  android:textColor="?attr/colorOnSurface"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <com.google.android.material.textview.MaterialTextView
+                  android:id="@+id/txtTitleKeys" android:text="未选择"
+                  android:textAppearance="?attr/textAppearanceBodySmall"
+                  android:textColor="?attr/colorOnSurfaceVariant"
+                  android:maxLines="2" android:ellipsize="end"
+                  android:layout_width="match_parent" android:layout_height="wrap_content"
+                  android:paddingTop="2dp" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTitleKeys"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="选择"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="12dp" />
+          </LinearLayout>
+
+        </LinearLayout>
+      </com.google.android.material.card.MaterialCardView>
+
+      <!-- 游戏文件 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/txtSecFiles"
+          android:text="游戏文件"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:paddingTop="20dp"
+          android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="6dp" android:paddingBottom="6dp">
+
+          <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp">
+            <LinearLayout android:orientation="vertical"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
+              <com.google.android.material.textview.MaterialTextView
+                  android:text="本体 .nsp / .nsz（必需）"
+                  android:textAppearance="?attr/textAppearanceBodyLarge"
+                  android:textColor="?attr/colorOnSurface"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <com.google.android.material.textview.MaterialTextView
+                  android:id="@+id/txtBase" android:text="未选择"
+                  android:textAppearance="?attr/textAppearanceBodySmall"
+                  android:textColor="?attr/colorOnSurfaceVariant"
+                  android:maxLines="2" android:ellipsize="end"
+                  android:layout_width="match_parent" android:layout_height="wrap_content"
+                  android:paddingTop="2dp" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBase"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="选择"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="12dp" />
+          </LinearLayout>
+
+          <com.google.android.material.divider.MaterialDivider
+              android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+          <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+              android:layout_width="match_parent" android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp">
+            <LinearLayout android:orientation="vertical"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
+              <com.google.android.material.textview.MaterialTextView
+                  android:text="更新 .nsp / .nsz（可选，合并）"
+                  android:textAppearance="?attr/textAppearanceBodyLarge"
+                  android:textColor="?attr/colorOnSurface"
+                  android:layout_width="match_parent" android:layout_height="wrap_content" />
+              <com.google.android.material.textview.MaterialTextView
+                  android:id="@+id/txtUpdate" android:text="未选择"
+                  android:textAppearance="?attr/textAppearanceBodySmall"
+                  android:textColor="?attr/colorOnSurfaceVariant"
+                  android:maxLines="2" android:ellipsize="end"
+                  android:layout_width="match_parent" android:layout_height="wrap_content"
+                  android:paddingTop="2dp" />
+            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUpdate"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="选择"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="12dp" />
+          </LinearLayout>
+
+        </LinearLayout>
+      </com.google.android.material.card.MaterialCardView>
+
+      <!-- 输出 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/txtSecOutput"
+          android:text="输出"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:paddingTop="20dp"
+          android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content">
+        <LinearLayout android:orientation="horizontal" android:gravity="center_vertical"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="14dp" android:paddingBottom="14dp">
+          <LinearLayout android:orientation="vertical"
+              android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
+            <com.google.android.material.textview.MaterialTextView
+                android:text="输出目录（必需）"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="?attr/colorOnSurface"
+                android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/txtOutput" android:text="未选择"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:maxLines="2" android:ellipsize="end"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingTop="2dp" />
+          </LinearLayout>
+          <com.google.android.material.button.MaterialButton
+              android:id="@+id/btnOutput"
+              style="@style/Widget.Material3.Button.TonalButton"
+              android:text="选择"
+              android:layout_width="wrap_content" android:layout_height="wrap_content"
+              android:layout_marginStart="12dp" />
+        </LinearLayout>
+      </com.google.android.material.card.MaterialCardView>
+
+      <!-- 提取选项 -->
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/txtSecOptions"
+          android:text="提取选项"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:paddingTop="20dp"
+          android:paddingBottom="8dp" />
+
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Filled"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:paddingTop="6dp" android:paddingBottom="6dp">
+          <com.google.android.material.materialswitch.MaterialSwitch
+              android:id="@+id/chkRomfs"
+              android:text="提取 romfs"
+              android:checked="true"
+              android:textAppearance="?attr/textAppearanceBodyLarge"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp" />
+          <com.google.android.material.divider.MaterialDivider
+              android:layout_width="match_parent" android:layout_height="wrap_content" />
+          <com.google.android.material.materialswitch.MaterialSwitch
+              android:id="@+id/chkExefs"
+              android:text="提取 exefs"
+              android:checked="true"
+              android:textAppearance="?attr/textAppearanceBodyLarge"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:paddingTop="10dp" android:paddingBottom="10dp" />
+        </LinearLayout>
+      </com.google.android.material.card.MaterialCardView>
+
+      <com.google.android.material.button.MaterialButton
+          android:id="@+id/btnStart"
+          android:text="开始提取"
+          android:enabled="false"
+          android:textAppearance="?attr/textAppearanceTitleMedium"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="24dp"
+          android:paddingTop="14dp" android:paddingBottom="14dp" />
+
+      <com.google.android.material.progressindicator.LinearProgressIndicator
+          android:id="@+id/progress"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="16dp"
+          android:max="100"
+          android:progress="0"
+          android:indeterminate="false"
+          app:trackThickness="6dp"
+          app:trackCornerRadius="3dp" />
+
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/txtStatus"
+          android:text="就绪"
+          android:textAppearance="?attr/textAppearanceTitleMedium"
+          android:textColor="?attr/colorOnSurface"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:paddingTop="12dp" />
+
+      <com.google.android.material.textview.MaterialTextView
+          android:id="@+id/txtSecLog"
+          android:text="运行日志"
+          android:textAppearance="?attr/textAppearanceTitleSmall"
+          android:textColor="?attr/colorPrimary"
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:paddingTop="20dp"
+          android:paddingBottom="8dp" />
+
+      <!-- 固定高度日志窗口：内部滚动，缓存清理等操作不会改变其大小。 -->
+      <com.google.android.material.card.MaterialCardView
+          style="@style/Widget.Material3.CardView.Outlined"
+          android:layout_width="match_parent"
+          android:layout_height="@dimen/log_window_height">
+        <ScrollView
+            android:id="@+id/logScroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+          <com.google.android.material.textview.MaterialTextView
+              android:id="@+id/txtLog"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:textColor="?attr/colorOnSurfaceVariant"
+              android:typeface="monospace"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:padding="12dp" />
+        </ScrollView>
+      </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+  </androidx.core.widget.NestedScrollView>
+</LinearLayout>

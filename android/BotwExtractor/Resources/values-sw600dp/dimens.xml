@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Tablet / large viewport: roomier margins and a taller log window. -->
+  <dimen name="page_padding">32dp</dimen>
+  <dimen name="log_window_height">280dp</dimen>
+</resources>
