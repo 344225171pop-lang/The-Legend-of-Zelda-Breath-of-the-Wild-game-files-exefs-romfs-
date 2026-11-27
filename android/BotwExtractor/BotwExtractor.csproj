@@ -8,9 +8,9 @@
     <RootNamespace>BotwExtractor</RootNamespace>
     <AssemblyName>BotwExtractor</AssemblyName>
     <ApplicationId>com.botw.extractor</ApplicationId>
-    <ApplicationTitle>BOTW Extractor</ApplicationTitle>
-    <ApplicationVersion>8</ApplicationVersion>
-    <ApplicationDisplayVersion>1.7</ApplicationDisplayVersion>
+    <ApplicationTitle>BOTW 提取器</ApplicationTitle>
+    <ApplicationVersion>9</ApplicationVersion>
+    <ApplicationDisplayVersion>1.8</ApplicationDisplayVersion>
     <JavaSdkDirectory>E:\botw_work\jdk17</JavaSdkDirectory>
     <AndroidSdkDirectory>E:\botw_work\android-sdk</AndroidSdkDirectory>
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>

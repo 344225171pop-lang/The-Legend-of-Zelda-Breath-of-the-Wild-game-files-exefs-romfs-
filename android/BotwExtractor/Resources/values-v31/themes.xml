@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Android 12+ splash screen layered on the shared palette theme
+       (see values/themes.xml). The adaptive launcher icon is used as the splash
+       icon so the system renders it with its own background and mask. -->
+  <style name="AppTheme" parent="BaseAppTheme">
+    <item name="android:windowSplashScreenBackground">@color/md_surface</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+  </style>
+</resources>

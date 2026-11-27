@@ -6,6 +6,7 @@ using Android.Util;
 using Android.Views;
 using Android.Widget;
 using AndroidX.AppCompat.App;
+using AndroidX.Core.View;
 using BotwExtractor.Ui;
 using MaterialButton = Google.Android.Material.Button.MaterialButton;
 using MaterialSwitch = Google.Android.Material.MaterialSwitch.MaterialSwitch;
@@ -128,6 +129,19 @@ namespace BotwExtractor
             SetSwatch(a, Resource.Id.swPrimary, primary);
             SetSwatch(a, Resource.Id.swSecondary, secondary);
             SetSwatch(a, Resource.Id.swTertiary, tertiary);
+
+            // System-bar icons follow the resolved surface colour: the content is
+            // inset-padded, so both bars are drawn over colorSurface (not over the
+            // coloured app bar). Deriving this from the live colour also keeps
+            // dynamic colour / custom palettes readable instead of trusting the
+            // night-mode flag alone.
+            var insets = WindowCompat.GetInsetsController(a.Window, a.Window.DecorView);
+            if (insets != null)
+            {
+                bool darkIcons = ColorMath.RelativeLuminance(surface) > 0.5;
+                insets.AppearanceLightStatusBars = darkIcons;
+                insets.AppearanceLightNavigationBars = darkIcons;
+            }
         }
 
         static void SetButton(Activity a, int id, int bg, int text)

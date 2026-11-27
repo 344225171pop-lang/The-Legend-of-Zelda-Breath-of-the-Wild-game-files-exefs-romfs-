@@ -7,10 +7,12 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
-using Android.Runtime;
 using Android.Util;
 using Android.Views;
 using Android.Widget;
+using AndroidX.Activity;
+using AndroidX.Activity.Result;
+using AndroidX.Activity.Result.Contract;
 using AndroidX.AppCompat.App;
 using AndroidX.Core.View;
 using BotwExtractor.Ui;
@@ -26,7 +28,8 @@ namespace BotwExtractor
         ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.KeyboardHidden)]
     public class SettingsActivity : AppCompatActivity
     {
-        const int ReqExport = 301;
+        // Activity Result API launcher for the export document picker.
+        ActivityResultLauncher _exportLauncher;
 
         ThemePrefs _prefs;
         ThemePalette _palette;
@@ -43,29 +46,24 @@ namespace BotwExtractor
             ThemeManager.EnsureNightMode(this);
             base.OnCreate(savedInstanceState);
             DynamicColors.ApplyToActivityIfAvailable(this);
-            WindowCompat.SetDecorFitsSystemWindows(Window, false);
+            EdgeToEdge.Enable(this);
             SetContentView(Resource.Layout.activity_settings);
+
+            // Registered before the activity reaches STARTED.
+            _exportLauncher = RegisterForActivityResult(new ActivityResultContracts.CreateDocument("text/plain"),
+                new ResultCallback(OnExportTargetPicked));
 
             _prefs = new ThemePrefs(new PrefsStore(this));
             _palette = _prefs.GetPalette();
 
             var toolbar = FindViewById<MaterialToolbar>(Resource.Id.toolbar);
-            toolbar.Title = "设置";
+            toolbar.SetTitle(Resource.String.settings_title);
             toolbar.SetNavigationIcon(Resource.Drawable.abc_ic_ab_back_material);
             toolbar.NavigationClick += (s, e) => Finish();
 
             var root = FindViewById(Resource.Id.root);
             _insetsListener = new SystemBarsInsetsListener();
             ViewCompat.SetOnApplyWindowInsetsListener(root, _insetsListener);
-
-            bool night = (Resources.Configuration.UiMode & Android.Content.Res.UiMode.NightMask)
-                == Android.Content.Res.UiMode.NightYes;
-            var controller = WindowCompat.GetInsetsController(Window, Window.DecorView);
-            if (controller != null)
-            {
-                controller.AppearanceLightStatusBars = !night;
-                controller.AppearanceLightNavigationBars = !night;
-            }
 
             _rgNight = FindViewById<RadioGroup>(Resource.Id.rgNight);
             _txtCacheSize = FindViewById<TextView>(Resource.Id.txtCacheSize);
@@ -121,8 +119,10 @@ namespace BotwExtractor
                 : NightMode.System;
             _prefs.SetNightMode(mode);
             ThemeManager.EnsureNightMode(this);
+            // AppCompat recreates the activity to apply the new theme; the system
+            // supplies the transition (custom OverridePendingTransition is
+            // deprecated since API 34).
             Recreate();
-            OverridePendingTransition(Resource.Animation.fade_in, Resource.Animation.fade_out);
         }
 
         void RefreshPaletteUi()
@@ -264,24 +264,18 @@ namespace BotwExtractor
                 .Show();
         }
 
-        void StartExport()
-        {
-            var intent = new Intent(Intent.ActionCreateDocument);
-            intent.AddCategory(Intent.CategoryOpenable);
-            intent.SetType("text/plain");
-            intent.PutExtra(Intent.ExtraTitle, _pendingName);
-            StartActivityForResult(intent, ReqExport);
-        }
+        // Storage Access Framework: the launcher asks the user where to write and
+        // hands back a content URI (no legacy startActivityForResult path).
+        void StartExport() => _exportLauncher.Launch(_pendingName);
 
-        protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent data)
+        void OnExportTargetPicked(Java.Lang.Object result)
         {
-            base.OnActivityResult(requestCode, resultCode, data);
-            if (requestCode != ReqExport || resultCode != Result.Ok || data?.Data == null) return;
+            var target = result.AsUri();
             var entries = _pendingEntries;
             var ctx = _pendingCtx;
             string name = _pendingName;
-            if (entries == null) return;
-            var target = data.Data;
+            if (target == null || entries == null) return;
+
             // Stream the export on a worker thread with a 64 KB buffer: no UI
             // thread blocking, no full-content string copy during IO.
             Task.Run(() =>

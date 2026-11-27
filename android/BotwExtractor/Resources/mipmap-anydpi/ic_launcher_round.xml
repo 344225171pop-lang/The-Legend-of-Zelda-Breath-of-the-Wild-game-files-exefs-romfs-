@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Legacy round launcher icon (API 25, no adaptive icons). -->
+  <path android:fillColor="@color/ic_launcher_background" android:pathData="M12,0A12,12 0,1 1,12,24A12,12 0,1 1,12,0z" />
+  <path android:fillColor="#FFFFFF" android:pathData="M11,4h2v8h3l-4,4 -4,-4h3z" />
+  <path android:fillColor="#FFFFFF" android:pathData="M5,18h14v2h-14z" />
+</vector>

@@ -28,4 +28,11 @@
   <color name="md_surface_inverse">#DDE4E3</color>
   <color name="md_on_surface_inverse">#2B3232</color>
   <color name="md_primary_inverse">#00696D</color>
+
+  <!-- M3 surface-container tiers (dark). -->
+  <color name="md_surface_container_lowest">#090F0F</color>
+  <color name="md_surface_container_low">#161D1D</color>
+  <color name="md_surface_container">#1A2121</color>
+  <color name="md_surface_container_high">#252C2C</color>
+  <color name="md_surface_container_highest">#303737</color>
 </resources>

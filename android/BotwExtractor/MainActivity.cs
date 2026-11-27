@@ -8,10 +8,13 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Provider;
-using Android.Runtime;
 using Android.Views;
 using Android.Widget;
+using AndroidX.Activity;
+using AndroidX.Activity.Result;
+using AndroidX.Activity.Result.Contract;
 using AndroidX.AppCompat.App;
+using AndroidX.Core.App;
 using AndroidX.Core.View;
 using Extractor.Core;
 using BotwExtractor.Ui;
@@ -22,16 +25,16 @@ using Uri = Android.Net.Uri;
 
 namespace BotwExtractor
 {
-    [Activity(Label = "BOTW Extractor", MainLauncher = true,
+    // No explicit Label: the launcher/task label inherits @string/app_name from
+    // the application element instead of duplicating a display name here.
+    [Activity(MainLauncher = true,
         ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.KeyboardHidden)]
     public class MainActivity : AppCompatActivity
     {
-        const int ReqProdKeys = 101;
-        const int ReqTitleKeys = 102;
-        const int ReqBase = 103;
-        const int ReqUpdate = 104;
-        const int ReqOutput = 105;
-        const int ReqLegacyPermission = 200;
+        // Activity Result API launchers replace startActivityForResult /
+        // onActivityResult, which are deprecated since API 30.
+        ActivityResultLauncher _pickProdKeys, _pickTitleKeys, _pickBase, _pickUpdate, _pickOutput;
+        ActivityResultLauncher _requestLegacyPermission;
 
         string _prodKeys, _titleKeys, _basePath, _updatePath, _outputDir;
         TextView _txtProdKeys, _txtTitleKeys, _txtBase, _txtUpdate, _txtOutput, _txtStatus, _txtLog;
@@ -53,32 +56,31 @@ namespace BotwExtractor
 
             // Material You: overlay wallpaper-based dynamic color on Android 12+.
             DynamicColors.ApplyToActivityIfAvailable(this);
-            // Edge-to-edge: draw behind the system bars, pad content via insets below.
-            WindowCompat.SetDecorFitsSystemWindows(Window, false);
-
+            // Edge-to-edge: draw behind the system bars, pad content via insets.
+            EdgeToEdge.Enable(this);
             SetContentView(Resource.Layout.activity_main);
 
+            // Must be registered before the activity reaches STARTED.
+            RegisterLaunchers();
+
             var toolbar = FindViewById<MaterialToolbar>(Resource.Id.toolbar);
-            toolbar.Title = "BOTW 提取器";
+            toolbar.SetTitle(Resource.String.app_name);
             toolbar.InflateMenu(Resource.Menu.main_menu);
             toolbar.MenuItemClick += (s, e) =>
             {
                 if (e.Item.ItemId == Resource.Id.action_settings)
-                    StartActivity(typeof(SettingsActivity));
+                {
+                    // Replaces the deprecated OverridePendingTransition with the
+                    // ActivityOptions API so the fade still plays on modern OSes.
+                    var options = ActivityOptionsCompat.MakeCustomAnimation(
+                        this, Resource.Animation.fade_in, Resource.Animation.fade_out);
+                    StartActivity(new Intent(this, typeof(SettingsActivity)), options.ToBundle());
+                }
             };
 
             var root = FindViewById(Resource.Id.root);
             _insetsListener = new SystemBarsInsetsListener();
             ViewCompat.SetOnApplyWindowInsetsListener(root, _insetsListener);
-
-            bool night = (Resources.Configuration.UiMode & Android.Content.Res.UiMode.NightMask)
-                == Android.Content.Res.UiMode.NightYes;
-            var controller = WindowCompat.GetInsetsController(Window, Window.DecorView);
-            if (controller != null)
-            {
-                controller.AppearanceLightStatusBars = !night;
-                controller.AppearanceLightNavigationBars = !night;
-            }
 
             _txtProdKeys = FindViewById<TextView>(Resource.Id.txtProdKeys);
             _txtTitleKeys = FindViewById<TextView>(Resource.Id.txtTitleKeys);
@@ -99,11 +101,11 @@ namespace BotwExtractor
             _progress = FindViewById<ProgressBar>(Resource.Id.progress);
             _logScroll = FindViewById<ScrollView>(Resource.Id.logScroll);
 
-            _btnProdKeys.Click += (s, e) => PickFile(ReqProdKeys);
-            _btnTitleKeys.Click += (s, e) => PickFile(ReqTitleKeys);
-            _btnBase.Click += (s, e) => PickFile(ReqBase);
-            _btnUpdate.Click += (s, e) => PickFile(ReqUpdate);
-            _btnOutput.Click += (s, e) => PickDir(ReqOutput);
+            _btnProdKeys.Click += (s, e) => LaunchFilePicker(_pickProdKeys);
+            _btnTitleKeys.Click += (s, e) => LaunchFilePicker(_pickTitleKeys);
+            _btnBase.Click += (s, e) => LaunchFilePicker(_pickBase);
+            _btnUpdate.Click += (s, e) => LaunchFilePicker(_pickUpdate);
+            _btnOutput.Click += (s, e) => _pickOutput.Launch(null);
             _btnPermission.Click += (s, e) => RequestStorage();
             _btnStart.Click += (s, e) => { if (_running) _cts?.Cancel(); else StartExtract(); };
 
@@ -160,50 +162,57 @@ namespace BotwExtractor
             }
             else if (sdk >= 23)
             {
-                RequestPermissions(new[]
+                _requestLegacyPermission.Launch(Java.Lang.Object.FromArray(new[]
                 {
                     Android.Manifest.Permission.WriteExternalStorage,
                     Android.Manifest.Permission.ReadExternalStorage
-                }, ReqLegacyPermission);
+                }));
             }
         }
 
-        public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
+        // Activity Result API: one launcher per target, registered before STARTED.
+        void RegisterLaunchers()
         {
-            base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-            RefreshPermission();
+            _pickProdKeys = RegisterPicker(p => { _prodKeys = p; _txtProdKeys.Text = p; });
+            _pickTitleKeys = RegisterPicker(p => { _titleKeys = p; _txtTitleKeys.Text = p; });
+            _pickBase = RegisterPicker(p => { _basePath = p; _txtBase.Text = p; });
+            _pickUpdate = RegisterPicker(p => { _updatePath = p; _txtUpdate.Text = p; });
+
+            _pickOutput = RegisterForActivityResult(new ActivityResultContracts.OpenDocumentTree(),
+                new ResultCallback(result =>
+                {
+                    var uri = result.AsUri();
+                    if (uri == null) return;
+                    string path = UriToPath(this, uri);
+                    if (path == null) { AppendLog("无法解析所选目录: " + uri); return; }
+                    _outputDir = path;
+                    _txtOutput.Text = path;
+                    UpdateStartEnabled();
+                }));
+
+            _requestLegacyPermission = RegisterForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                new ResultCallback(_ => RefreshPermission()));
         }
 
-        void PickFile(int req)
+        ActivityResultLauncher RegisterPicker(Action<string> apply)
         {
-            var intent = new Intent(Intent.ActionOpenDocument);
-            intent.AddCategory(Intent.CategoryOpenable);
-            intent.SetType("*/*");
-            StartActivityForResult(intent, req);
+            return RegisterForActivityResult(new ActivityResultContracts.OpenDocument(),
+                new ResultCallback(result =>
+                {
+                    var uri = result.AsUri();
+                    if (uri == null) return;
+                    string path = UriToPath(this, uri);
+                    if (path == null) { AppendLog("无法解析所选路径: " + uri); return; }
+                    apply(path);
+                    UpdateStartEnabled();
+                }));
         }
 
-        void PickDir(int req)
-        {
-            var intent = new Intent(Intent.ActionOpenDocumentTree);
-            StartActivityForResult(intent, req);
-        }
-
-        protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent data)
-        {
-            base.OnActivityResult(requestCode, resultCode, data);
-            if (resultCode != Result.Ok || data?.Data == null) return;
-            string path = UriToPath(this, data.Data);
-            if (path == null) { AppendLog("无法解析所选路径: " + data.Data); return; }
-            switch (requestCode)
-            {
-                case ReqProdKeys: _prodKeys = path; _txtProdKeys.Text = path; break;
-                case ReqTitleKeys: _titleKeys = path; _txtTitleKeys.Text = path; break;
-                case ReqBase: _basePath = path; _txtBase.Text = path; break;
-                case ReqUpdate: _updatePath = path; _txtUpdate.Text = path; break;
-                case ReqOutput: _outputDir = path; _txtOutput.Text = path; break;
-            }
-            UpdateStartEnabled();
-        }
+        // ACTION_OPEN_DOCUMENT requires a MIME filter; NSP/NSZ have no registered
+        // type, so offer every file and let the user pick.
+        static void LaunchFilePicker(ActivityResultLauncher launcher) =>
+            launcher.Launch(Java.Lang.Object.FromArray(new[] { "*/*" }));
 
         static string UriToPath(Context ctx, Uri uri)
         {
@@ -416,14 +425,19 @@ namespace BotwExtractor
         }
     }
 
-    // Applies system-bar (status + navigation) insets as padding on the root view
-    // so edge-to-edge content is not obscured.
+    // Applies system-bar + display-cutout insets as padding on the root view so
+    // edge-to-edge content is never obscured by the status/navigation bars.
     sealed class SystemBarsInsetsListener : Java.Lang.Object, AndroidX.Core.View.IOnApplyWindowInsetsListener
     {
         public AndroidX.Core.View.WindowInsetsCompat OnApplyWindowInsets(View v, AndroidX.Core.View.WindowInsetsCompat insets)
         {
             var bars = insets.GetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.SystemBars());
-            v.SetPadding(bars.Left, bars.Top, bars.Right, bars.Bottom);
+            var cutout = insets.GetInsets(AndroidX.Core.View.WindowInsetsCompat.Type.DisplayCutout());
+            v.SetPadding(
+                Math.Max(bars.Left, cutout.Left),
+                Math.Max(bars.Top, cutout.Top),
+                Math.Max(bars.Right, cutout.Right),
+                Math.Max(bars.Bottom, cutout.Bottom));
             return insets;
         }
     }

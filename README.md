@@ -21,12 +21,13 @@
 - **多线程导出**：exefs 与 romfs 并行执行；段内使用 worker 池分片复制，大文件按块并行写入；每个 worker 持有独立的 NCA 读取会话以保证线程安全（默认并行度 `min(核心数, 6)`，可用 `ExtractOptions.Parallelism` 调整）。
 - 提供 PC 端验证入口（`PcVerify`）与命令行提取示例（`extractor`）。
 
-### Android 应用（BotwExtractor，v1.7）
+### Android 应用（BotwExtractor，v1.8）
 
 - **暗黑模式**：支持「跟随系统主题」自动适配与手动切换，切换带淡入淡出过渡动画；明暗两套配色均按 WCAG 2.x 对比度公式校验文字可读性。
 - **日志导出**：设置区提供导出入口，流程为「时间范围选择 → 内容预览 → 生成标准 `.log` 文件」，导出内容包含完整运行上下文。
 - **主题色自定义**：可视化取色面板，支持主色调 / 辅助色 / 强调色实时调整，配色方案本地持久化，可一键重置为默认值，调整即时全局生效。
 - **缓存清理**：清理前展示缓存总占用与可清理项明细的二次确认弹窗；完成后反馈释放空间大小；任务运行中的临时目录受保护、不被清理，日志窗口保持固定尺寸不受影响。
+- **现代 Android 集成（v1.8）**：edge-to-edge 全屏布局并统一处理系统栏 / 刘海 insets；改用 Activity Result API（不再使用已废弃的 `startActivityForResult` / `onActivityResult`）；启用预测性返回（`enableOnBackInvokedCallback`）；自适应 + 单色启动图标与 Android 12+ 启动画面；布局文案全部抽取到 `strings.xml`；系统栏图标按实时解析的配色亮度取反，自定义与动态配色下同样清晰可读。
 - 上述功能均适配桌面 / 移动端响应式布局，并配有单元测试与集成测试。
 
 ---
@@ -103,7 +104,8 @@
 │   │   ├── BotwExtractor.csproj  # 应用工程文件（版本、签名、依赖、SDK 路径）
 │   │   ├── MainActivity.cs       # 主界面：文件选择、提取流程、固定日志窗口、设置入口
 │   │   ├── SettingsActivity.cs   # 设置界面：暗黑模式 / 日志导出 / 主题色 / 缓存清理四区块
-│   │   ├── ThemeManager.cs       # 主题管理：明暗切换、实时着色、过渡动画
+│   │   ├── ThemeManager.cs       # 主题管理：明暗切换、实时着色、系统栏对比度
+│   │   ├── ActivityResults.cs    # Activity Result API 适配层（IActivityResultCallback → lambda）
 │   │   ├── Ui/                   # 与 Android 解耦的纯逻辑层（可被测试工程共享）
 │   │   │   ├── AppState.cs       # 跨 Activity 运行态（提取中标志、共享日志库）
 │   │   │   ├── ColorMath.cs      # WCAG 亮度 / 对比度计算与颜色工具
@@ -111,12 +113,14 @@
 │   │   │   ├── CacheScanner.cs   # 缓存扫描 / 明细 / 受保护项 / 清理逻辑
 │   │   │   └── ThemePrefs.cs     # 主题偏好与配色持久化（ISettingsStore 抽象）
 │   │   ├── Properties/
-│   │   │   └── AndroidManifest.xml  # 应用清单：包名、权限、Activity 声明
+│   │   │   └── AndroidManifest.xml  # 应用清单：包名、权限、RTL / 预测性返回、图标
 │   │   └── Resources/            # Android 资源
 │   │       ├── layout/           # 界面布局（主界面 / 设置 / 取色弹窗 / 日志预览弹窗）
-│   │       ├── values/           # 默认 colors / dimens / themes
+│   │       ├── values/           # 默认 colors / dimens / themes / strings
+│   │       ├── values-v31/       # Android 12+ 启动画面（splash screen）主题
 │   │       ├── values-night/     # 暗黑模式配色
 │   │       ├── values-sw600dp/   # 平板 / 大屏尺寸适配
+│   │       ├── mipmap-anydpi*/   # 自适应 / 单色启动图标（含 API 24-25 矢量回退）
 │   │       ├── anim/             # 淡入 / 淡出过渡动画
 │   │       ├── menu/             # 主菜单
 │   │       └── drawable/         # 图标等图形资源
@@ -125,7 +129,8 @@
 │       ├── ColorMathTests.cs     # 颜色 / 对比度测试
 │       ├── LogStoreTests.cs      # 日志存储 / 导出测试
 │       ├── ExportOptimizationTests.cs # 导出优化字节级一致性测试（对照 v1.5 算法）
-│       ├── ParallelSectionCopierTests.cs # 多线程分段复制正确性测试
+│       ├── ParallelSectionCopierTests.cs # 多线程分段复制 + 输出路径越界防护测试
+│       ├── NszDecompressorTests.cs # NSZ/NCZ 头部校验（损坏 / 恶意容器防护）
 │       ├── CacheScannerTests.cs  # 缓存扫描 / 清理 / 保护测试
 │       ├── ThemePrefsTests.cs    # 主题持久化 / 重置测试
 │       └── IntegrationTests.cs   # 跨功能集成测试
@@ -184,11 +189,11 @@ dotnet build android/BotwExtractor/BotwExtractor.csproj -c Release
 
 ## 测试说明
 
-测试工程 `BotwExtractor.Tests` 基于 **xUnit**，通过 `Compile Include` 共享应用中的 `Ui/*.cs` 纯逻辑层与 `core/Extractor.Core/ParallelSectionCopier.cs`，从而在**不依赖 Android 运行时与游戏镜像**的情况下验证核心行为。覆盖范围包括：
+测试工程 `BotwExtractor.Tests` 基于 **xUnit**，通过 `Compile Include` 共享应用中的 `Ui/*.cs` 纯逻辑层以及 `core/Extractor.Core` 中的 `ParallelSectionCopier.cs` / `NszDecompressor.cs` / `AesCtr.cs` / `Progress.cs`，从而在**不依赖 Android 运行时与游戏镜像**的情况下验证核心行为（当前 90 项）。覆盖范围包括：
 
 - **正常流程**：颜色对比度计算、日志写入与导出、缓存扫描与清理、主题持久化、并行分段复制。
 - **边界场景**：空日志、容量上限、非法颜色值、空缓存目录、空文件与分块边界对齐。
-- **异常 / 保护场景**：任务运行中临时目录受保护不被清理、重置默认值、跨功能集成一致性、复制过程中取消与源读取失败。
+- **异常 / 保护场景**：任务运行中临时目录受保护不被清理、重置默认值、跨功能集成一致性、复制过程中取消与源读取失败、容器条目路径越界、NCZ 头部非法段数。
 - **一致性场景**：日志导出的新实现与旧算法输出逐字节一致；并行复制的输出与串行复制逐字节一致。
 
 运行 `dotnet test android/BotwExtractor.Tests/BotwExtractor.Tests.csproj -c Release` 即可执行全部测试。

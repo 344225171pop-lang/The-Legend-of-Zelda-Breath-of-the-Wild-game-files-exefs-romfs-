@@ -2,8 +2,11 @@
 <resources>
   <!-- Material 3 (Material You) theme. DayNight follows the system setting.
        On Android 12+ DynamicColors.ApplyToActivityIfAvailable overlays the
-       wallpaper-based palette at runtime; the colors below are the baseline. -->
-  <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+       wallpaper-based palette at runtime; the colors below are the baseline.
+
+       The theme is split so version-qualified overrides (values-v31) can add
+       platform-only attributes without duplicating the palette. -->
+  <style name="BaseAppTheme" parent="Theme.Material3.DayNight.NoActionBar">
     <item name="colorPrimary">@color/md_primary</item>
     <item name="colorOnPrimary">@color/md_on_primary</item>
     <item name="colorPrimaryContainer">@color/md_primary_container</item>
@@ -32,11 +35,20 @@
     <item name="colorOnSurfaceInverse">@color/md_on_surface_inverse</item>
     <item name="colorPrimaryInverse">@color/md_primary_inverse</item>
 
-    <!-- Edge-to-edge: transparent system bars, content draws behind them. -->
-    <item name="android:statusBarColor">@android:color/transparent</item>
-    <item name="android:navigationBarColor">@android:color/transparent</item>
-    <item name="android:enforceStatusBarContrast">false</item>
-    <item name="android:enforceNavigationBarContrast">false</item>
+    <!-- M3 surface-container tiers used by filled cards, sheets and menus. -->
+    <item name="colorSurfaceContainerLowest">@color/md_surface_container_lowest</item>
+    <item name="colorSurfaceContainerLow">@color/md_surface_container_low</item>
+    <item name="colorSurfaceContainer">@color/md_surface_container</item>
+    <item name="colorSurfaceContainerHigh">@color/md_surface_container_high</item>
+    <item name="colorSurfaceContainerHighest">@color/md_surface_container_highest</item>
+
+    <!-- Edge-to-edge: content draws behind the system bars; the bars are made
+         transparent at runtime by AndroidX Activity EdgeToEdge. -->
+    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     <item name="android:windowBackground">?attr/colorSurface</item>
   </style>
+
+  <!-- Activity theme referenced from the manifest. Kept as a thin layer so the
+       same name can be extended in values-v31 with splash-screen attributes. -->
+  <style name="AppTheme" parent="BaseAppTheme" />
 </resources>

@@ -29,4 +29,15 @@
   <color name="md_surface_inverse">#2B3232</color>
   <color name="md_on_surface_inverse">#ECF2F1</color>
   <color name="md_primary_inverse">#4CD9DF</color>
+
+  <!-- M3 surface-container tiers (keeps filled cards/sheets on this palette
+       instead of the Material baseline greys). -->
+  <color name="md_surface_container_lowest">#FFFFFF</color>
+  <color name="md_surface_container_low">#EEF5F4</color>
+  <color name="md_surface_container">#E8EFEE</color>
+  <color name="md_surface_container_high">#E2E9E9</color>
+  <color name="md_surface_container_highest">#DCE3E2</color>
+
+  <!-- Adaptive launcher icon background (brand teal, theme independent). -->
+  <color name="ic_launcher_background">#00696D</color>
 </resources>

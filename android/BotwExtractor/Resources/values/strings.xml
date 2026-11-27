@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- App-level strings. UI text lives in resources so it can be translated and
+       so layouts stay lint-clean (no HardcodedText). -->
+
+  <string name="app_name">BOTW 提取器</string>
+  <string name="settings_title">设置</string>
+  <string name="action_settings">设置</string>
+
+  <!-- Main screen -->
+  <string name="app_intro">从 NSP / NSZ 提取 romfs 与 exefs，支持 base + update 合并。输出结构：输出目录/TitleId/{exefs,romfs}</string>
+  <string name="action_grant_all_files">授予全文件访问权限</string>
+  <string name="section_keys">密钥</string>
+  <string name="label_prod_keys">prod.keys（必需）</string>
+  <string name="label_title_keys">title.keys（可选）</string>
+  <string name="placeholder_not_selected">未选择</string>
+  <string name="action_select">选择</string>
+  <string name="section_game_files">游戏文件</string>
+  <string name="label_base">本体 .nsp / .nsz（必需）</string>
+  <string name="label_update">更新 .nsp / .nsz（可选，合并）</string>
+  <string name="section_output">输出</string>
+  <string name="label_output_dir">输出目录（必需）</string>
+  <string name="section_options">提取选项</string>
+  <string name="option_romfs">提取 romfs</string>
+  <string name="option_exefs">提取 exefs</string>
+  <string name="action_start">开始提取</string>
+  <string name="status_ready">就绪</string>
+  <string name="section_log">运行日志</string>
+
+  <!-- Settings screen -->
+  <string name="section_appearance">外观模式</string>
+  <string name="night_system">跟随系统主题</string>
+  <string name="night_light">浅色模式</string>
+  <string name="night_dark">深色模式</string>
+  <string name="section_theme_colors">主题颜色</string>
+  <string name="palette_primary">主色调</string>
+  <string name="palette_secondary">辅助色</string>
+  <string name="palette_tertiary">强调色</string>
+  <string name="action_adjust">调整</string>
+  <string name="action_save_palette">保存配色</string>
+  <string name="action_reset_default">重置默认</string>
+  <string name="section_log_export">日志导出</string>
+  <string name="log_export_desc">选择时间范围并预览后，导出为标准 .log 文件，包含完整系统运行上下文。</string>
+  <string name="action_export_log">导出日志</string>
+  <string name="section_cache">缓存清理</string>
+  <string name="cache_size_placeholder">当前缓存占用：0 B</string>
+  <string name="cache_clean_desc">清理前会列出可清理项与占用明细。提取任务进行时，临时文件将被保护，不影响运行中的操作。</string>
+  <string name="action_clean_cache">清理缓存</string>
+
+  <!-- Color picker dialog -->
+  <string name="hint_hex_color">十六进制 (#RRGGBB)</string>
+  <string name="hex_channel_red">R</string>
+  <string name="hex_channel_green">G</string>
+  <string name="hex_channel_blue">B</string>
+
+  <!-- Accessibility -->
+  <string name="a11y_progress">提取进度</string>
+</resources>
