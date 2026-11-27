@@ -108,7 +108,7 @@ namespace BotwExtractor
             _btnStart.Click += (s, e) => { if (_running) _cts?.Cancel(); else StartExtract(); };
 
             RefreshPermission();
-            AppState.Logs.Add("INFO", "应用启动 v1.5 · " + Build.Manufacturer + " " + Build.Model +
+            AppState.Logs.Add("INFO", "应用启动 v" + AppVersionText() + " · " + Build.Manufacturer + " " + Build.Model +
                 " · Android " + Build.VERSION.Release);
         }
 
@@ -117,6 +117,14 @@ namespace BotwExtractor
             base.OnResume();
             RefreshPermission();
             ThemeManager.Apply(this);
+        }
+
+        // Single source of truth: the installed manifest version, so the startup
+        // log never drifts from BotwExtractor.csproj again.
+        string AppVersionText()
+        {
+            try { return PackageManager?.GetPackageInfo(PackageName, 0)?.VersionName ?? "?"; }
+            catch { return "?"; }
         }
 
         void RefreshPermission()

@@ -43,6 +43,11 @@ namespace Extractor.Core
                 throw new InvalidDataException("Not an NCZ/NSZ file (missing NCZSECTN).");
 
             long sectionCount = ReadInt64(inFs);
+            // Bound the table before allocating: a corrupt/hostile NSZ could
+            // otherwise ask for billions of sections and exhaust memory.
+            const long MaxSections = 4096;
+            if (sectionCount <= 0 || sectionCount > MaxSections)
+                throw new InvalidDataException("Unreasonable NCZ section count: " + sectionCount);
             var sections = new Section[sectionCount];
             for (int i = 0; i < sectionCount; i++) sections[i] = ReadSection(inFs);
 

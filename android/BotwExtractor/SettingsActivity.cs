@@ -219,8 +219,10 @@ namespace BotwExtractor
 
         LogContext BuildContext(LogRangePreset preset, DateTime from, DateTime to, DateTime now)
         {
-            string version = "1.6";
-            try { version = PackageManager.GetPackageInfo(PackageName, 0).VersionName; } catch { }
+            // Fall back to "?" instead of a hardcoded version so the export header
+            // can never claim a stale build number.
+            string version = "?";
+            try { version = PackageManager.GetPackageInfo(PackageName, 0).VersionName ?? "?"; } catch { }
             return new LogContext
             {
                 AppVersion = version,

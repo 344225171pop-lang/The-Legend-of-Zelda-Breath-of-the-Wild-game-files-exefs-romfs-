@@ -316,5 +316,26 @@ namespace BotwExtractor.Tests
             Assert.Equal(files.Count, lastFiles);
             Assert.Equal(files.Values.Sum(v => (long)v.Length), lastBytes);
         }
+
+        [Fact]
+        public void Copy_PathEscapingEntry_IsRejected()
+        {
+            // A crafted container must not be able to write outside the output
+            // root through ".." segments.
+            using var tree = new TempTree();
+            var factory = new MemoryFactory(new Dictionary<string, byte[]>
+            {
+                ["../escape.bin"] = Pattern(64, 1),
+                ["dir/../../escape2.bin"] = Pattern(64, 2),
+            });
+
+            Assert.ThrowsAny<InvalidDataException>(() =>
+                ParallelSectionCopier.Copy(factory.Enumerate(), tree.Root, factory,
+                    new ParallelCopyOptions { Parallelism = 2 }, null, CancellationToken.None));
+
+            string parent = Path.GetDirectoryName(tree.Root);
+            Assert.False(File.Exists(Path.Combine(parent, "escape.bin")));
+            Assert.False(File.Exists(Path.Combine(parent, "escape2.bin")));
+        }
     }
 }

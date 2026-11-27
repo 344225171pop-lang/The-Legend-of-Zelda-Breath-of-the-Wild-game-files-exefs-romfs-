@@ -294,7 +294,19 @@ namespace Extractor.Core
             string rel = relativePath ?? "";
             while (rel.StartsWith("/", StringComparison.Ordinal)) rel = rel.Substring(1);
             if (rel.Length == 0) return outRoot;
-            return Path.Combine(outRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+
+            // Containment guard: entries come from a third-party container, so a
+            // crafted or corrupt archive must never write outside the output root
+            // (via "..", a rooted path, or a drive/UNC prefix).
+            string rootFull = Path.GetFullPath(outRoot);
+            string dest = Path.GetFullPath(Path.Combine(rootFull, rel.Replace('/', Path.DirectorySeparatorChar)));
+            string rootWithSep = rootFull.EndsWith(Path.DirectorySeparatorChar)
+                ? rootFull
+                : rootFull + Path.DirectorySeparatorChar;
+            var cmp = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            if (!dest.Equals(rootFull, cmp) && !dest.StartsWith(rootWithSep, cmp))
+                throw new InvalidDataException("Unsafe entry path escapes the output directory: " + relativePath);
+            return dest;
         }
     }
 }

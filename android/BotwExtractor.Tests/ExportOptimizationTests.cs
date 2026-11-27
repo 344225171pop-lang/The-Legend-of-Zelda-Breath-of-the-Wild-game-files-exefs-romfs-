@@ -79,9 +79,13 @@ namespace BotwExtractor.Tests
         [Fact]
         public void Format_Empty_MatchesLegacy()
         {
+            // Share one context: two separate `new LogContext()` instances stamp
+            // ExportedAt with DateTime.Now independently, which makes the byte
+            // comparison flaky whenever the two calls straddle a millisecond.
+            var ctx = new LogContext();
             Assert.Equal(
-                LegacyFormat(Array.Empty<LogEntry>(), new LogContext()),
-                LogExporter.Format(Array.Empty<LogEntry>(), new LogContext()));
+                LegacyFormat(Array.Empty<LogEntry>(), ctx),
+                LogExporter.Format(Array.Empty<LogEntry>(), ctx));
         }
 
         [Fact]
