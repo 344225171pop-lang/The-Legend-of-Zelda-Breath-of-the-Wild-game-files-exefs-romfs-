@@ -66,13 +66,25 @@ namespace BotwExtractor
             int tonalText = custom ? ColorMath.EnsureContrast(secondary, tonalBg, 4.5)
                                    : ResolveAttrColor(a, Resource.Attribute.colorOnSecondaryContainer);
 
-            // Toolbar
+            // Toolbar: flat M3 style, no coloured fill. The app bar sits on the
+            // same surface as the content, so title/icons use the on-surface
+            // colours and the primary tone stays reserved for actions.
             var toolbar = a.FindViewById<MaterialToolbar>(Resource.Id.toolbar);
             if (toolbar != null)
             {
-                toolbar.SetBackgroundColor(new Color(primary));
-                toolbar.SetTitleTextColor(new Color(onPrimary));
-                toolbar.SetNavigationIconTint(new Color(onPrimary));
+                int onSurfaceVariant = ResolveAttrColor(a, Resource.Attribute.colorOnSurfaceVariant);
+                toolbar.SetBackgroundColor(new Color(surface));
+                toolbar.SetTitleTextColor(new Color(onSurface));
+                toolbar.SetNavigationIconTint(new Color(onSurfaceVariant));
+
+                // Menu icons must follow the same contrast, otherwise the platform
+                // glyph turns invisible on a dark surface.
+                var menu = toolbar.Menu;
+                if (menu != null)
+                {
+                    for (int i = 0; i < menu.Size(); i++)
+                        MenuItemCompat.SetIconTintList(menu.GetItem(i), Tint(onSurfaceVariant));
+                }
             }
 
             // Filled buttons
