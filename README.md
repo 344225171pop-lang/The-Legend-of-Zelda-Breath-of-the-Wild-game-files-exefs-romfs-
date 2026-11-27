@@ -86,13 +86,16 @@
 │
 ├── perf/                         # 性能基准工程与报告（不属于发布产物）
 │   ├── ExportBench/              # 日志导出基准：v1.5 串行 vs v1.6 流式
+│   ├── FileExportBench/          # 日志文件导出实测：预览 / 旧实现 / 现实现落盘（p50·min·分配）
 │   ├── ExtractBench/             # exefs/romfs 基准：v1.6 串行 vs v1.7 多线程（--prepare 解包镜像）
 │   ├── bench-output.md           # 日志导出基准原始输出
+│   ├── file-export-bench-output.md # 文件导出实测原始输出（含 5 轮聚合）
 │   └── extract-bench-output.md   # 提取基准原始输出
 │
 ├── docs/perf/                    # 性能优化日志与测试报告
 │   ├── optimization-log.md
 │   ├── export-benchmark-report.md
+│   ├── file-export-benchmark-report.md   # v1.8.1 日志文件导出实测报告
 │   ├── extraction-thread-optimization.md
 │   └── extraction-benchmark-report.md
 │
